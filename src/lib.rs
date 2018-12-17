@@ -50,4 +50,8 @@ where
             }
         }
     }
+
+    pub fn dissociate(&mut self, id: u32) {
+        self.alloted.remove(&id);
+    }
 }
