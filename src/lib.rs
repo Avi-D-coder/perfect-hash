@@ -1,7 +1,8 @@
 use std::cmp::{Ord, Ordering::*};
+use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
-use nohash_hasher::IntMap;
+use nohash_hasher::{BuildNoHashHasher, IntMap};
 
 pub struct PerfectHasher<C, H> {
     // Key is the Id
@@ -21,12 +22,15 @@ where
         }
     }
 
-    // fn with_capacity(capacity: u32, hasher: H) -> Self {
-    //     PerfectHasher {
-    //         alloted: IntMap::with_capacity(capacity),
-    //         hasher,
-    //     }
-    // }
+    pub fn with_capacity(capacity: u32, hasher: H) -> Self {
+        PerfectHasher {
+            alloted: HashMap::with_capacity_and_hasher(
+                capacity as usize,
+                BuildNoHashHasher::default(),
+            ),
+            hasher,
+        }
+    }
 
     pub fn unique_id(&mut self, content: C) -> u32 {
         content.hash(&mut self.hasher);
