@@ -38,9 +38,9 @@ macro_rules! PerfectHasher {
                 content.hash(&mut self.hasher);
                 let mut hash = self.hasher.finish() as $size;
 
-                let mut comparison = Equal;
-
                 loop {
+                    let mut comparison = Equal;
+
                     let entry = self
                         .alloted
                         .entry(hash)
