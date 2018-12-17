@@ -4,28 +4,28 @@ use std::hash::{Hash, Hasher};
 
 use nohash_hasher::{BuildNoHashHasher, IntMap};
 
-pub struct PerfectHasher<Id, C, H> {
-    // Key is the Id
-    alloted: IntMap<Id, C>,
-    hasher: H,
-}
-
 macro_rules! PerfectHasher {
-    ($size:ty) => {
-        impl<C, H> PerfectHasher<$size, C, H>
+    ($name:ident, $size:ty) => {
+        pub struct $name<C, H> {
+            // Key is the Id
+            alloted: IntMap<$size, C>,
+            hasher: H,
+        }
+
+        impl<C, H> $name<C, H>
         where
             H: Hasher,
             C: Hash + Ord,
         {
             pub fn new(hasher: H) -> Self {
-                PerfectHasher {
+                $name {
                     alloted: IntMap::default(),
                     hasher,
                 }
             }
 
             pub fn with_capacity(capacity: $size, hasher: H) -> Self {
-                PerfectHasher {
+                $name {
                     alloted: HashMap::with_capacity_and_hasher(
                         capacity as usize,
                         BuildNoHashHasher::default(),
@@ -64,8 +64,8 @@ macro_rules! PerfectHasher {
     };
 }
 
-PerfectHasher!(u8);
-PerfectHasher!(u16);
-PerfectHasher!(u32);
-PerfectHasher!(u64);
-PerfectHasher!(usize);
+PerfectHasher!(PerfectHasher8, u8);
+PerfectHasher!(PerfectHasher16, u16);
+PerfectHasher!(PerfectHasher32, u32);
+PerfectHasher!(PerfectHasher64, u64);
+PerfectHasher!(PerfectHasher, usize);
