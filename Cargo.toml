@@ -1,0 +1,9 @@
+[package]
+name = "perfect-hash"
+version = "0.1.0"
+authors = ["Avi ד"]
+license = "MIT/Apache-2.0"
+edition = "2018"
+
+[dependencies]
+nohash-hasher = "0.1.1"
