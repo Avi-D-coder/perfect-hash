@@ -69,3 +69,26 @@ PerfectHasher!(PerfectHasher16, u16);
 PerfectHasher!(PerfectHasher32, u32);
 PerfectHasher!(PerfectHasher64, u64);
 PerfectHasher!(PerfectHasher, usize);
+
+mod test {
+    use super::*;
+
+    /// A Hasher that always outputs `0` for testing purposes.
+    #[allow(dead_code)]
+    pub struct CollideHasher;
+
+    impl Hasher for CollideHasher {
+        fn write(&mut self, _: &[u8]) {}
+
+        fn finish(&self) -> u64 {
+            1
+        }
+    }
+
+    #[test]
+    fn collision_resilience() {
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        assert_eq!(1, ph.unique_id('a'));
+        assert_eq!(2, ph.unique_id('b'));
+    }
+}
