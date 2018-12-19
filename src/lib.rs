@@ -1,4 +1,5 @@
 use std::cmp::{Ord, Ordering::*};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
@@ -24,7 +25,17 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn with_capacity(capacity: $size, hasher: H) -> Self {
+            pub fn with_capacity(capacity: $size) -> $name<C, DefaultHasher> {
+                $name {
+                    alloted: HashMap::with_capacity_and_hasher(
+                        capacity as usize,
+                        BuildNoHashHasher::default(),
+                    ),
+                    hasher: DefaultHasher::default(),
+                }
+            }
+
+            pub fn with_capacity_and_hasher(capacity: $size, hasher: H) -> Self {
                 $name {
                     alloted: HashMap::with_capacity_and_hasher(
                         capacity as usize,
