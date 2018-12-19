@@ -98,4 +98,12 @@ mod test {
         assert_eq!(0, ph.unique_id('b'));
         assert_eq!(usize::max_value(), ph.unique_id('a'));
     }
+
+    #[test]
+    fn dissociate() {
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        assert_eq!(0, ph.unique_id('a'));
+        ph.dissociate(0);
+        assert_eq!(0, ph.unique_id('b'));
+    }
 }
