@@ -44,15 +44,15 @@ macro_rules! PerfectHasher {
                     let entry = self
                         .alloted
                         .entry(hash)
-                        .and_modify(|cached| comparison = (*cached).cmp(&content));
+                        .and_modify(|cached| comparison = content.cmp(cached));
 
                     match comparison {
                         Equal => {
                             entry.or_insert(content);
                             return hash;
                         }
-                        Less => hash += 1,
-                        Greater => hash -= 1,
+                        Less => hash = hash.wrapping_sub(1),
+                        Greater => hash = hash.wrapping_add(1),
                     }
                 }
             }
@@ -81,14 +81,21 @@ mod test {
         fn write(&mut self, _: &[u8]) {}
 
         fn finish(&self) -> u64 {
-            1
+            0
         }
     }
 
     #[test]
     fn collision_resilience() {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
-        assert_eq!(1, ph.unique_id('a'));
-        assert_eq!(2, ph.unique_id('b'));
+        assert_eq!(0, ph.unique_id('a'));
+        assert_eq!(1, ph.unique_id('b'));
+    }
+
+    #[test]
+    fn collision_wrap() {
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        assert_eq!(0, ph.unique_id('b'));
+        assert_eq!(usize::max_value(), ph.unique_id('a'));
     }
 }
