@@ -6,7 +6,7 @@ use std::hash::{Hash, Hasher};
 use nohash_hasher::{BuildNoHashHasher, IntMap};
 
 macro_rules! PerfectHasher {
-    ($name:ident, $size:ty) => {
+    ($name:ident, $map_name:ident, $size:ty) => {
         pub struct $name<C, H> {
             // Key is the Id
             alloted: IntMap<$size, C>,
@@ -72,14 +72,85 @@ macro_rules! PerfectHasher {
                 self.alloted.remove(&id);
             }
         }
+
+        pub struct $map_name<C, H, T> {
+            // Key is the Id
+            alloted: IntMap<$size, (C, T)>,
+            hasher: H,
+        }
+
+        impl<C, H, T> $map_name<C, H, T>
+        where
+            H: Hasher,
+            C: Hash + Ord,
+        {
+            pub fn new(hasher: H) -> Self {
+                $map_name {
+                    alloted: IntMap::default(),
+                    hasher,
+                }
+            }
+
+            pub fn with_capacity(capacity: $size) -> $map_name<C, DefaultHasher, T> {
+                $map_name {
+                    alloted: HashMap::with_capacity_and_hasher(
+                        capacity as usize,
+                        BuildNoHashHasher::default(),
+                    ),
+                    hasher: DefaultHasher::default(),
+                }
+            }
+
+            pub fn with_capacity_and_hasher(capacity: $size, hasher: H) -> Self {
+                $map_name {
+                    alloted: HashMap::with_capacity_and_hasher(
+                        capacity as usize,
+                        BuildNoHashHasher::default(),
+                    ),
+                    hasher,
+                }
+            }
+
+            pub fn unique_id<F>(&mut self, content: C, data: T, modify: F) -> $size
+            where
+                F: FnOnce(&mut T, &T),
+            {
+                content.hash(&mut self.hasher);
+                let mut hash = self.hasher.finish() as $size;
+
+                loop {
+                    let mut comparison = Equal;
+
+                    let entry = self
+                        .alloted
+                        .entry(hash)
+                        .and_modify(|(cached, _)| comparison = content.cmp(cached));
+
+                    match comparison {
+                        Equal => {
+                            entry
+                                .and_modify(|(_, old_data)| modify(old_data, &data))
+                                .or_insert((content, data));
+                            return hash;
+                        }
+                        Less => hash = hash.wrapping_sub(1),
+                        Greater => hash = hash.wrapping_add(1),
+                    }
+                }
+            }
+
+            pub fn dissociate(&mut self, id: $size) {
+                self.alloted.remove(&id);
+            }
+        }
     };
 }
 
-PerfectHasher!(PerfectHasher8, u8);
-PerfectHasher!(PerfectHasher16, u16);
-PerfectHasher!(PerfectHasher32, u32);
-PerfectHasher!(PerfectHasher64, u64);
-PerfectHasher!(PerfectHasher, usize);
+PerfectHasher!(PerfectHasher8, PerfectHashMap8, u8);
+PerfectHasher!(PerfectHasher16, PerfectHashMap16, u16);
+PerfectHasher!(PerfectHasher32, PerfectHashMap32, u32);
+PerfectHasher!(PerfectHasher64, PerfectHashMap64, u64);
+PerfectHasher!(PerfectHasher, PerfectHashMap, usize);
 
 mod test {
     use super::*;
