@@ -5,8 +5,25 @@ use std::hash::{Hash, Hasher};
 
 use nohash_hasher::{BuildNoHashHasher, IntMap};
 
+#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+pub struct Id<T> {
+    key: T,
+}
+
+impl<T> Id<T> {
+    fn new(key: T) -> Id<T> {
+        Id { key }
+    }
+}
+
 macro_rules! PerfectHasher {
     ($name:ident, $map_name:ident, $size:ty) => {
+        impl Into<$size> for Id<$size> {
+            fn into(self) -> $size {
+                self.key
+            }
+        }
+
         pub struct $name<C, H> {
             // Key is the Id
             alloted: IntMap<$size, C>,
@@ -45,7 +62,7 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn unique_id(&mut self, content: C) -> $size {
+            pub fn unique_id(&mut self, content: C) -> Id<$size> {
                 content.hash(&mut self.hasher);
                 let mut hash = self.hasher.finish() as $size;
 
@@ -60,7 +77,7 @@ macro_rules! PerfectHasher {
                     match comparison {
                         Equal => {
                             entry.or_insert(content);
-                            return hash;
+                            return Id::new(hash);
                         }
                         Less => hash = hash.wrapping_sub(1),
                         Greater => hash = hash.wrapping_add(1),
@@ -68,8 +85,12 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn dissociate(&mut self, id: $size) {
-                self.alloted.remove(&id);
+            pub fn at(&self, id: Id<$size>) -> &C {
+                self.alloted.get(&id.into()).unwrap()
+            }
+
+            pub fn dissociate(&mut self, id: Id<$size>) {
+                self.alloted.remove(&id.into());
             }
         }
 
@@ -111,7 +132,7 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn unique_id<F>(&mut self, content: C, data: T, modify: F) -> $size
+            pub fn unique_id<F>(&mut self, content: C, data: T, modify: F) -> Id<$size>
             where
                 F: FnOnce(&mut T, &T),
             {
@@ -131,7 +152,7 @@ macro_rules! PerfectHasher {
                             entry
                                 .and_modify(|(_, old_data)| modify(old_data, &data))
                                 .or_insert((content, data));
-                            return hash;
+                            return Id::new(hash);
                         }
                         Less => hash = hash.wrapping_sub(1),
                         Greater => hash = hash.wrapping_add(1),
@@ -139,8 +160,12 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn dissociate(&mut self, id: $size) {
-                self.alloted.remove(&id);
+            pub fn at(&self, id: Id<$size>) -> &(C, T) {
+                self.alloted.get(&id.into()).unwrap()
+            }
+
+            pub fn dissociate(&mut self, id: Id<$size>) {
+                self.alloted.remove(&id.into());
             }
         }
     };
@@ -170,22 +195,22 @@ mod test {
     #[test]
     fn collision_resilience() {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
-        assert_eq!(0, ph.unique_id('a'));
-        assert_eq!(1, ph.unique_id('b'));
+        assert_eq!(Id::new(0), ph.unique_id('a'));
+        assert_eq!(Id::new(0), ph.unique_id('b'));
     }
 
     #[test]
     fn collision_wrap() {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
-        assert_eq!(0, ph.unique_id('b'));
-        assert_eq!(usize::max_value(), ph.unique_id('a'));
+        assert_eq!(Id::new(0), ph.unique_id('b'));
+        assert_eq!(Id::new(usize::max_value()), ph.unique_id('a'));
     }
 
     #[test]
     fn dissociate() {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
-        assert_eq!(0, ph.unique_id('a'));
-        ph.dissociate(0);
-        assert_eq!(0, ph.unique_id('b'));
+        assert_eq!(Id::new(0), ph.unique_id('a'));
+        ph.dissociate(Id::new(0));
+        assert_eq!(Id::new(0), ph.unique_id('b'));
     }
 }
