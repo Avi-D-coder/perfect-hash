@@ -89,6 +89,10 @@ macro_rules! PerfectHasher {
                 self.alloted.get(&id.into()).unwrap()
             }
 
+            pub fn get(&self, id: $size) -> Option<&C> {
+                self.alloted.get(&id)
+            }
+
             pub fn dissociate(&mut self, id: Id<$size>) {
                 self.alloted.remove(&id.into());
             }
@@ -163,6 +167,18 @@ macro_rules! PerfectHasher {
             pub fn at(&self, id: Id<$size>) -> &(C, T) {
                 self.alloted.get(&id.into()).unwrap()
             }
+
+            pub fn get(&self, id: $size) -> Option<&(C, T)> {
+                self.alloted.get(&id)
+            }
+
+            pub fn get_mut(&mut self, id: $size) -> Option<(&C, &mut T)> {
+                self.alloted
+                    .get_mut(&id)
+                    .map(|(content, data)| (&*content, data))
+            }
+
+            // TODO Implement entry API
 
             pub fn dissociate(&mut self, id: Id<$size>) {
                 self.alloted.remove(&id.into());
