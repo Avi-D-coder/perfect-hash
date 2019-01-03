@@ -2,6 +2,7 @@ use std::cmp::{Ord, Ordering::*};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::ops::Index;
 
 use nohash_hasher::{BuildNoHashHasher, IntMap};
 
@@ -28,6 +29,13 @@ macro_rules! PerfectHasher {
             // Key is the Id
             alloted: IntMap<$size, C>,
             hasher: H,
+        }
+
+        impl<C, H> Index<Id<$size>> for $name<C, H> {
+            type Output = C;
+            fn index(&self, id: Id<$size>) -> &C {
+                &self.alloted[&id.into()]
+            }
         }
 
         impl<C, H> $name<C, H>
@@ -83,10 +91,6 @@ macro_rules! PerfectHasher {
                         Greater => hash = hash.wrapping_add(1),
                     }
                 }
-            }
-
-            pub fn at(&self, id: Id<$size>) -> &C {
-                self.alloted.get(&id.into()).unwrap()
             }
 
             pub fn get(&self, id: $size) -> Option<&C> {
@@ -212,7 +216,7 @@ mod test {
     fn collision_resilience() {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
         assert_eq!(Id::new(0), ph.unique_id('a'));
-        assert_eq!(Id::new(0), ph.unique_id('b'));
+        assert_eq!(Id::new(1), ph.unique_id('b'));
     }
 
     #[test]
@@ -228,5 +232,12 @@ mod test {
         assert_eq!(Id::new(0), ph.unique_id('a'));
         ph.dissociate(Id::new(0));
         assert_eq!(Id::new(0), ph.unique_id('b'));
+    }
+
+    #[test]
+    fn index() {
+        let mut ph = PerfectHasher::new(DefaultHasher::default());
+        let id = ph.unique_id(String::from("foo"));
+        assert_eq!("foo", ph[id])
     }
 }
