@@ -108,6 +108,13 @@ macro_rules! PerfectHasher {
             hasher: H,
         }
 
+        impl<C, H, T> Index<Id<$size>> for $map_name<C, H, T> {
+            type Output = (C, T);
+            fn index(&self, id: Id<$size>) -> &(C, T) {
+                &self.alloted[&id.into()]
+            }
+        }
+
         impl<C, H, T> $map_name<C, H, T>
         where
             H: Hasher,
@@ -168,12 +175,8 @@ macro_rules! PerfectHasher {
                 }
             }
 
-            pub fn at(&self, id: Id<$size>) -> &(C, T) {
-                self.alloted.get(&id.into()).unwrap()
-            }
-
-            pub fn get(&self, id: $size) -> Option<&(C, T)> {
-                self.alloted.get(&id)
+            pub fn index_mut(&mut self, id: Id<$size>) -> (&C, &mut T) {
+                self.get_mut(id.into()).unwrap()
             }
 
             pub fn get_mut(&mut self, id: $size) -> Option<(&C, &mut T)> {
