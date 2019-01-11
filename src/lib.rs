@@ -6,7 +6,7 @@ use std::ops::Index;
 
 use nohash_hasher::{BuildNoHashHasher, IntMap};
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Id<T> {
     key: T,
 }
@@ -38,12 +38,35 @@ macro_rules! PerfectHasher {
             }
         }
 
+        impl<C> $name<C, DefaultHasher> {
+            /// If you are not worried about DDoS you should use a faster hasher.
+            /// Rust defaults to SipHash which is more DDoS resistant, but very slow.
+            /// I recommend the fasthash crate for a collection of faster hashing algorithms.
+            /// You should use `with_hasher(hasher)` or `default()` when you don't need DDoS resistance.
+            pub fn new() -> Self {
+                $name {
+                    alloted: IntMap::default(),
+                    hasher: DefaultHasher::default(),
+                }
+            }
+        }
+
+        impl<C, H> Default for $name<C, H>
+        where
+            H: Hasher + Default,
+            C: Hash + Ord,
+        {
+            fn default() -> $name<C, H> {
+                $name::with_hasher(H::default())
+            }
+        }
+
         impl<C, H> $name<C, H>
         where
             H: Hasher,
             C: Hash + Ord,
         {
-            pub fn new(hasher: H) -> Self {
+            pub fn with_hasher(hasher: H) -> Self {
                 $name {
                     alloted: IntMap::default(),
                     hasher,
@@ -115,12 +138,35 @@ macro_rules! PerfectHasher {
             }
         }
 
+        impl<C, T> $map_name<C, DefaultHasher, T> {
+            /// If you are not worried about DDoS you should use a faster hasher.
+            /// Rust defaults to SipHash which is more DDoS resistant, but very slow.
+            /// I recommend the fasthash crate for a collection of faster hashing algorithms.
+            /// You should use `with_hasher(hasher)` or `default()` when you don't need DDoS resistance.
+            pub fn new() -> Self {
+                $map_name {
+                    alloted: IntMap::default(),
+                    hasher: DefaultHasher::default(),
+                }
+            }
+        }
+
+        impl<C, H, T> Default for $map_name<C, H, T>
+        where
+            H: Hasher + Default,
+            C: Hash + Ord,
+        {
+            fn default() -> $map_name<C, H, T> {
+                $map_name::with_hasher(H::default())
+            }
+        }
+
         impl<C, H, T> $map_name<C, H, T>
         where
             H: Hasher,
             C: Hash + Ord,
         {
-            pub fn new(hasher: H) -> Self {
+            pub fn with_hasher(hasher: H) -> Self {
                 $map_name {
                     alloted: IntMap::default(),
                     hasher,
@@ -217,21 +263,21 @@ mod test {
 
     #[test]
     fn collision_resilience() {
-        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::with_hasher(CollideHasher);
         assert_eq!(Id::new(0), ph.unique_id('a'));
         assert_eq!(Id::new(1), ph.unique_id('b'));
     }
 
     #[test]
     fn collision_wrap() {
-        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::with_hasher(CollideHasher);
         assert_eq!(Id::new(0), ph.unique_id('b'));
         assert_eq!(Id::new(usize::max_value()), ph.unique_id('a'));
     }
 
     #[test]
     fn dissociate() {
-        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::new(CollideHasher);
+        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::with_hasher(CollideHasher);
         assert_eq!(Id::new(0), ph.unique_id('a'));
         ph.dissociate(Id::new(0));
         assert_eq!(Id::new(0), ph.unique_id('b'));
@@ -239,7 +285,7 @@ mod test {
 
     #[test]
     fn index() {
-        let mut ph = PerfectHasher::new(DefaultHasher::default());
+        let mut ph = PerfectHasher::with_hasher(DefaultHasher::default());
         let id = ph.unique_id(String::from("foo"));
         assert_eq!("foo", ph[id])
     }
