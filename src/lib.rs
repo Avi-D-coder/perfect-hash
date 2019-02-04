@@ -18,7 +18,7 @@ impl<T> Id<T> {
 }
 
 macro_rules! PerfectHasher {
-    ($name:ident, $map_name:ident, $size:ty) => {
+    ($name:ident, $map_name:ident, $contents:ident, $size:ty) => {
         impl Into<$size> for Id<$size> {
             fn into(self) -> $size {
                 self.key
@@ -124,16 +124,33 @@ macro_rules! PerfectHasher {
                 self.alloted.remove(&id.into());
             }
 
-            /// Retrieves content associated with the ids from `ids` `Iterator`.
-            pub fn contents<I>(&self, ids: I) -> Vec<&C>
+            /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
+            pub fn contents<I, P>(&self, ids: I) -> $contents<I, C, H>
             where
                 I: Iterator<Item = Id<$size>>,
+                P: Iterator<Item = C>,
             {
-                let mut v = Vec::with_capacity(ids.size_hint().0);
-                for id in ids {
-                    self.alloted.get(&id.into()).map(|content| v.push(content));
-                }
-                v
+                $contents { ids, ph: self }
+            }
+        }
+
+        pub struct $contents<'l, I, C, H> {
+            ids: I,
+            ph: &'l $name<C, H>,
+        }
+
+        impl<'l, I, C, H> Iterator for $contents<'l, I, C, H>
+        where
+            I: Iterator<Item = Id<$size>>,
+        {
+            type Item = &'l C;
+            fn next(&mut self) -> Option<&'l C> {
+                self.ids
+                    .next()
+                    .map_or(None, |id: Id<$size>| self.ph.alloted.get(&id.into()))
+            }
+            fn size_hint(&self) -> (usize, Option<usize>) {
+                self.ids.size_hint()
             }
         }
 
@@ -248,15 +265,24 @@ macro_rules! PerfectHasher {
             pub fn dissociate(&mut self, id: Id<$size>) {
                 self.alloted.remove(&id.into());
             }
+
+            // TODO /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
+            // pub fn contents<I, P>(&self, ids: I) -> $contents<I, C, H>
+            // where
+            //     I: Iterator<Item = Id<$size>>,
+            //     P: Iterator<Item = C>,
+            // {
+            //     $contents { ids, ph: self }
+            // }
         }
     };
 }
 
-PerfectHasher!(PerfectHasher8, PerfectHashMap8, u8);
-PerfectHasher!(PerfectHasher16, PerfectHashMap16, u16);
-PerfectHasher!(PerfectHasher32, PerfectHashMap32, u32);
-PerfectHasher!(PerfectHasher64, PerfectHashMap64, u64);
-PerfectHasher!(PerfectHasher, PerfectHashMap, usize);
+PerfectHasher!(PerfectHasher8, PerfectHashMap8, ContentsU8, u8);
+PerfectHasher!(PerfectHasher16, PerfectHashMap16, ContentsU16, u16);
+PerfectHasher!(PerfectHasher32, PerfectHashMap32, ContentsU32, u32);
+PerfectHasher!(PerfectHasher64, PerfectHashMap64, ContentsU64, u64);
+PerfectHasher!(PerfectHasher, PerfectHashMap, Contents, usize);
 
 mod test {
     use super::*;
