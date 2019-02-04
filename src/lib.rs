@@ -123,6 +123,18 @@ macro_rules! PerfectHasher {
             pub fn dissociate(&mut self, id: Id<$size>) {
                 self.alloted.remove(&id.into());
             }
+
+            /// Retrieves content associated with the ids from `ids` `Iterator`.
+            pub fn contents<I>(&self, ids: I) -> Vec<&C>
+            where
+                I: Iterator<Item = Id<$size>>,
+            {
+                let mut v = Vec::with_capacity(ids.size_hint().0);
+                for id in ids {
+                    self.alloted.get(&id.into()).map(|content| v.push(content));
+                }
+                v
+            }
         }
 
         pub struct $map_name<C, H, T> {
