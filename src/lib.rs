@@ -125,10 +125,9 @@ macro_rules! PerfectHasher {
             }
 
             /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
-            pub fn contents<I, P>(&self, ids: I) -> $contents<I, C, H>
+            pub fn contents<I>(&self, ids: I) -> $contents<I, C, H>
             where
                 I: Iterator<Item = Id<$size>>,
-                P: Iterator<Item = C>,
             {
                 $contents { ids, ph: self }
             }
