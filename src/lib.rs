@@ -25,6 +25,12 @@ macro_rules! PerfectHasher {
             }
         }
 
+        impl Into<$size> for &Id<$size> {
+            fn into(self) -> $size {
+                self.key
+            }
+        }
+
         pub struct $name<C, H> {
             // Key is the Id
             alloted: IntMap<$size, C>,
@@ -125,9 +131,9 @@ macro_rules! PerfectHasher {
             }
 
             /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
-            pub fn contents<I>(&self, ids: I) -> $contents<I, C, H>
+            pub fn contents<'i, I>(&self, ids: I) -> $contents<I, C, H>
             where
-                I: Iterator<Item = Id<$size>>,
+                I: Iterator<Item = &'i Id<$size>>,
             {
                 $contents { ids, ph: self }
             }
@@ -138,15 +144,15 @@ macro_rules! PerfectHasher {
             ph: &'l $name<C, H>,
         }
 
-        impl<'l, I, C, H> Iterator for $contents<'l, I, C, H>
+        impl<'i, 'l, I, C, H> Iterator for $contents<'l, I, C, H>
         where
-            I: Iterator<Item = Id<$size>>,
+            I: Iterator<Item = &'i Id<$size>>,
         {
             type Item = &'l C;
             fn next(&mut self) -> Option<&'l C> {
                 self.ids
                     .next()
-                    .map_or(None, |id: Id<$size>| self.ph.alloted.get(&id.into()))
+                    .map_or(None, |id: &Id<$size>| self.ph.alloted.get(&id.into()))
             }
             fn size_hint(&self) -> (usize, Option<usize>) {
                 self.ids.size_hint()
