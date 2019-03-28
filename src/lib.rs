@@ -126,10 +126,6 @@ macro_rules! PerfectHasher {
                 self.alloted.get(&id)
             }
 
-            pub fn dissociate(&mut self, id: Id<$size>) {
-                self.alloted.remove(&id.into());
-            }
-
             /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
             pub fn contents<'i, I>(&self, ids: I) -> $contents<I, C, H>
             where
@@ -265,12 +261,6 @@ macro_rules! PerfectHasher {
                     .map(|(content, data)| (&*content, data))
             }
 
-            // TODO Implement entry API
-
-            pub fn dissociate(&mut self, id: Id<$size>) {
-                self.alloted.remove(&id.into());
-            }
-
             // TODO /// Returns an `Iterator` of content associated with the ids from `ids` `Iterator`.
             // pub fn contents<I, P>(&self, ids: I) -> $contents<I, C, H>
             // where
@@ -316,14 +306,6 @@ mod test {
         let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::with_hasher(CollideHasher);
         assert_eq!(Id::new(0), ph.unique_id('b'));
         assert_eq!(Id::new(usize::max_value()), ph.unique_id('a'));
-    }
-
-    #[test]
-    fn dissociate() {
-        let mut ph: PerfectHasher<char, CollideHasher> = PerfectHasher::with_hasher(CollideHasher);
-        assert_eq!(Id::new(0), ph.unique_id('a'));
-        ph.dissociate(Id::new(0));
-        assert_eq!(Id::new(0), ph.unique_id('b'));
     }
 
     #[test]
