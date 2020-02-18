@@ -7,4 +7,4 @@ description = "Hash + IntMap = No Collisions!"
 edition = "2018"
 
 [dependencies]
-nohash-hasher = "0.1.1"
+nohash-hasher = "0.2.0"
